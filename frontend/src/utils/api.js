@@ -1,11 +1,7 @@
 import axios from 'axios'
 
-// In development: uses Vite proxy → goes to localhost:5000
-// In production: uses VITE_API_URL → goes to your Render backend
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL
-    ? `${import.meta.env.VITE_API_URL}/api`
-    : '/api'
+  baseURL: 'https://studymart-api-ukaq.onrender.com/api'
 })
 
 api.interceptors.request.use(config => {
