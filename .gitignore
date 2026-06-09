@@ -1,0 +1,8 @@
+# Never upload these
+node_modules
+.env
+*.log
+dist
+uploads/images
+uploads/files
+studymart.zip
