@@ -22,7 +22,7 @@ export default function Chat() {
 
   useEffect(() => {
     if (!user) { navigate('/login'); return }
-    socket = io('/', { query: { userId: user._id } })
+    socket = io('https://studymart-api-ukaq.onrender.com', { query: { userId: user._id } })
 
     socket.on('newMessage', (msg) => {
       setMessages(prev => [...prev, msg])
