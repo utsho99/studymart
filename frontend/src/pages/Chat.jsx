@@ -38,14 +38,14 @@ export default function Chat() {
       }
     })
 
-    socket.on('newMessage', (msg) => {
+  socket.on('newMessage', (msg) => {
       setMessages(prev => {
-        // Avoid duplicate messages
+        // Only add if from OTHER user, we already added our own optimistically
+        if (msg.sender?._id === user._id || msg.sender === user._id) return prev
         if (prev.find(m => m._id === msg._id)) return prev
         return [...prev, msg]
       })
     })
-
     socket.on('userTyping', () => setIsTyping(true))
     socket.on('userStoppedTyping', () => setIsTyping(false))
 
@@ -97,10 +97,10 @@ export default function Chat() {
 
     // Send via REST API (reliable) + socket for real-time to other user
     try {
-      const { data } = await api.post(`/chat/conversations/${activeConv._id}/messages`, { text })
-      // Replace temp message with real one
+     const { data } = await api.post(`/chat/conversations/${activeConv._id}/messages`, { text })
+      // Replace temp message with real one from server
       setMessages(prev => prev.map(m => m._id === tempMsg._id ? data : m))
-      // Also emit via socket so other user gets it instantly
+      // Emit via socket so OTHER user gets it instantly (not ourselves)
       socket?.emit('sendMessage', {
         conversationId: activeConv._id,
         senderId: user._id,
