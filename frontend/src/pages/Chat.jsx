@@ -19,17 +19,37 @@ export default function Chat() {
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef(null)
   const typingTimeout = useRef(null)
+  const activeConvRef = useRef(null)
 
   useEffect(() => {
     if (!user) { navigate('/login'); return }
-    socket = io('https://studymart-api-ukaq.onrender.com', { query: { userId: user._id } })
+
+    // Connect socket
+    socket = io('https://studymart-api-ukaq.onrender.com', {
+      query: { userId: user._id },
+      transports: ['websocket', 'polling'],
+    })
+
+    socket.on('connect', () => {
+      console.log('Socket connected:', socket.id)
+      // Rejoin active conversation on reconnect
+      if (activeConvRef.current) {
+        socket.emit('joinConversation', activeConvRef.current._id)
+      }
+    })
 
     socket.on('newMessage', (msg) => {
-      setMessages(prev => [...prev, msg])
+      setMessages(prev => {
+        // Avoid duplicate messages
+        if (prev.find(m => m._id === msg._id)) return prev
+        return [...prev, msg]
+      })
     })
+
     socket.on('userTyping', () => setIsTyping(true))
     socket.on('userStoppedTyping', () => setIsTyping(false))
 
+    // Load conversations
     api.get('/chat/conversations').then(res => {
       setConversations(res.data)
       if (conversationId) {
@@ -40,7 +60,10 @@ export default function Chat() {
       }
     })
 
-    return () => socket?.disconnect()
+    return () => {
+      socket?.disconnect()
+      socket = null
+    }
   }, [user])
 
   useEffect(() => {
@@ -49,6 +72,7 @@ export default function Chat() {
 
   const openConversation = async (conv) => {
     setActiveConv(conv)
+    activeConvRef.current = conv
     socket?.emit('joinConversation', conv._id)
     const { data } = await api.get(`/chat/conversations/${conv._id}/messages`)
     setMessages(data)
@@ -60,7 +84,36 @@ export default function Chat() {
     setSending(true)
     const text = newMsg.trim()
     setNewMsg('')
-    socket?.emit('sendMessage', { conversationId: activeConv._id, senderId: user._id, text })
+
+    // Optimistically add message to UI
+    const tempMsg = {
+      _id: Date.now().toString(),
+      text,
+      sender: { _id: user._id, name: user.name, avatar: user.avatar },
+      createdAt: new Date().toISOString(),
+      conversation: activeConv._id,
+    }
+    setMessages(prev => [...prev, tempMsg])
+
+    // Send via REST API (reliable) + socket for real-time to other user
+    try {
+      const { data } = await api.post(`/chat/conversations/${activeConv._id}/messages`, { text })
+      // Replace temp message with real one
+      setMessages(prev => prev.map(m => m._id === tempMsg._id ? data : m))
+      // Also emit via socket so other user gets it instantly
+      socket?.emit('sendMessage', {
+        conversationId: activeConv._id,
+        senderId: user._id,
+        text,
+        messageId: data._id,
+      })
+    } catch {
+      // Remove temp message on error
+      setMessages(prev => prev.filter(m => m._id !== tempMsg._id))
+      setSending(false)
+      return
+    }
+
     socket?.emit('stopTyping', { conversationId: activeConv._id })
     setSending(false)
   }
@@ -83,12 +136,12 @@ export default function Chat() {
   if (!user) return null
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-20 md:pb-6">
-      <h1 className="text-xl font-bold text-gray-900 mb-4">Messages</h1>
+    <div className="max-w-5xl mx-auto px-2 sm:px-6 py-4 pb-20 md:pb-6">
+      <h1 className="text-xl font-bold text-gray-900 mb-4 px-2">Messages</h1>
 
-      <div className="flex gap-4 h-[70vh] bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="flex h-[75vh] bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         {/* Conversations List */}
-        <div className="w-72 flex-shrink-0 border-r border-gray-200 overflow-y-auto">
+        <div className={`${activeConv ? 'hidden md:flex' : 'flex'} w-full md:w-72 flex-shrink-0 border-r border-gray-200 overflow-y-auto flex-col`}>
           {conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-6">
               <p className="text-4xl mb-3">💬</p>
@@ -114,11 +167,17 @@ export default function Chat() {
         </div>
 
         {/* Chat Window */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className={`${activeConv ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-w-0`}>
           {activeConv ? (
             <>
               {/* Header */}
               <div className="p-3 border-b border-gray-200 flex items-center gap-3">
+                {/* Back button on mobile */}
+                <button onClick={() => setActiveConv(null)} className="md:hidden text-gray-400 hover:text-gray-600 mr-1">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
                 {(() => {
                   const other = getOtherParticipant(activeConv)
                   return (
@@ -141,13 +200,13 @@ export default function Chat() {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
                 {messages.map((msg, i) => {
                   const isMe = msg.sender?._id === user._id || msg.sender === user._id
                   return (
                     <div key={msg._id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[70%] rounded-2xl px-3 py-2 text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-gray-100 text-gray-900 rounded-bl-sm'}`}>
-                        <p>{msg.text}</p>
+                      <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-gray-100 text-gray-900 rounded-bl-sm'}`}>
+                        <p className="break-words">{msg.text}</p>
                         <p className={`text-xs mt-0.5 ${isMe ? 'text-blue-200' : 'text-gray-400'}`}>{timeAgo(msg.createdAt)}</p>
                       </div>
                     </div>
@@ -163,9 +222,18 @@ export default function Chat() {
 
               {/* Input */}
               <form onSubmit={sendMessage} className="p-3 border-t border-gray-200 flex gap-2">
-                <input type="text" value={newMsg} onChange={handleTyping} placeholder="Type a message..."
-                  className="flex-1 input text-sm py-2" autoFocus />
-                <button type="submit" disabled={!newMsg.trim()} className="btn-primary px-4 py-2 text-sm">Send</button>
+                <input
+                  type="text"
+                  value={newMsg}
+                  onChange={handleTyping}
+                  placeholder="Type a message..."
+                  className="flex-1 input text-sm py-2"
+                  autoFocus
+                />
+                <button type="submit" disabled={!newMsg.trim() || sending}
+                  className="btn-primary px-4 py-2 text-sm flex-shrink-0">
+                  Send
+                </button>
               </form>
             </>
           ) : (
