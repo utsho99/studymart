@@ -3,7 +3,7 @@ const router = express.Router();
 const { Message, Conversation } = require('../models/Message');
 const { protect } = require('../middleware/authMiddleware');
 
-// GET /api/chat/conversations - get all conversations for current user
+// GET /api/chat/conversations
 router.get('/conversations', protect, async (req, res) => {
   const conversations = await Conversation.find({ participants: req.user._id })
     .populate('participants', 'name avatar college')
@@ -12,12 +12,23 @@ router.get('/conversations', protect, async (req, res) => {
   res.json(conversations);
 });
 
-// POST /api/chat/conversations - start or get existing conversation
+// GET /api/chat/unread - total unread count for notification badge
+router.get('/unread', protect, async (req, res) => {
+  const count = await Message.countDocuments({
+    conversation: {
+      $in: await Conversation.find({ participants: req.user._id }).distinct('_id')
+    },
+    sender: { $ne: req.user._id },
+    isRead: false,
+  });
+  res.json({ count });
+});
+
+// POST /api/chat/conversations
 router.post('/conversations', protect, async (req, res) => {
   const { recipientId, listingId } = req.body;
   if (!recipientId) return res.status(400).json({ message: 'recipientId required' });
 
-  // Check if conversation already exists
   let conversation = await Conversation.findOne({
     participants: { $all: [req.user._id, recipientId] },
     listing: listingId || null,
@@ -50,7 +61,6 @@ router.get('/conversations/:id/messages', protect, async (req, res) => {
     .skip(skip)
     .limit(Number(limit));
 
-  // Mark messages as read
   await Message.updateMany(
     { conversation: req.params.id, sender: { $ne: req.user._id }, isRead: false },
     { isRead: true }
@@ -59,7 +69,7 @@ router.get('/conversations/:id/messages', protect, async (req, res) => {
   res.json(messages.reverse());
 });
 
-// POST /api/chat/conversations/:id/messages - send message (REST fallback)
+// POST /api/chat/conversations/:id/messages
 router.post('/conversations/:id/messages', protect, async (req, res) => {
   const { text } = req.body;
   if (!text) return res.status(400).json({ message: 'Message text required' });

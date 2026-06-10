@@ -1,6 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import api from '../../utils/api'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
@@ -8,11 +9,69 @@ export default function Navbar() {
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [searchQ, setSearchQ] = useState('')
+  const [unreadCount, setUnreadCount] = useState(0)
+  const prevUnreadRef = useRef(0)
+  const pollRef = useRef(null)
 
   const handleSearch = (e) => {
     e.preventDefault()
     if (searchQ.trim()) navigate(`/listings?search=${encodeURIComponent(searchQ.trim())}`)
   }
+
+  // Request browser notification permission
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      await Notification.requestPermission()
+    }
+  }
+
+  const showBrowserNotification = (count) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const n = new Notification('StudyMart', {
+        body: `You have ${count} new message${count > 1 ? 's' : ''}`,
+        icon: '/studymart-icon.png',
+        badge: '/studymart-icon.png',
+      })
+      n.onclick = () => { window.focus(); navigate('/chat'); n.close() }
+      setTimeout(() => n.close(), 5000)
+    }
+  }
+
+  useEffect(() => {
+    if (!user) return
+    requestNotificationPermission()
+
+    const fetchUnread = async () => {
+      try {
+        const { data } = await api.get('/chat/unread')
+        const newCount = data.count
+
+        // Show browser notification if new messages arrived
+        if (newCount > prevUnreadRef.current && prevUnreadRef.current !== null) {
+          const diff = newCount - prevUnreadRef.current
+          // Only notify if not currently on chat page
+          if (!window.location.pathname.includes('/chat')) {
+            showBrowserNotification(diff)
+          }
+        }
+        prevUnreadRef.current = newCount
+        setUnreadCount(newCount)
+      } catch {}
+    }
+
+    fetchUnread()
+    pollRef.current = setInterval(fetchUnread, 10000) // check every 10 seconds
+
+    return () => clearInterval(pollRef.current)
+  }, [user])
+
+  // Reset unread when visiting chat
+  useEffect(() => {
+    if (location.pathname.includes('/chat')) {
+      setUnreadCount(0)
+      prevUnreadRef.current = 0
+    }
+  }, [location.pathname])
 
   const navLinks = [
     { to: '/listings', label: 'Browse' },
@@ -35,13 +94,9 @@ export default function Navbar() {
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              <input
-                type="text"
-                value={searchQ}
-                onChange={e => setSearchQ(e.target.value)}
+              <input type="text" value={searchQ} onChange={e => setSearchQ(e.target.value)}
                 placeholder="Search books, notes, calculators..."
-                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white"
-              />
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white" />
             </div>
           </form>
 
@@ -65,11 +120,19 @@ export default function Navbar() {
                   </svg>
                   Sell
                 </Link>
+
+                {/* Chat icon with unread badge */}
                 <Link to="/chat" className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-600">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold leading-none">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </Link>
+
                 <div className="relative">
                   <button onClick={() => setMenuOpen(!menuOpen)} className="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100">
                     <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-xs">
@@ -118,13 +181,20 @@ export default function Navbar() {
           { to: user ? '/profile' : '/login', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', label: 'Profile' },
         ].map(item => (
           <Link key={item.to} to={item.to}
-            className={`flex-1 flex flex-col items-center py-2 gap-0.5 text-xs transition-colors ${location.pathname === item.to ? 'text-blue-600' : 'text-gray-500 hover:text-gray-900'}`}>
+            className={`flex-1 flex flex-col items-center py-2 gap-0.5 text-xs transition-colors relative ${location.pathname === item.to ? 'text-blue-600' : 'text-gray-500 hover:text-gray-900'}`}>
             {item.primary ? (
               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center mb-0.5">
                 <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} /></svg>
               </div>
             ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} /></svg>
+              <div className="relative">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} /></svg>
+                {item.to === '/chat' && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold" style={{fontSize: '8px'}}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </div>
             )}
             <span>{item.label}</span>
           </Link>
