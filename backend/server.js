@@ -13,13 +13,14 @@ const listingRoutes = require('./routes/listings');
 const noteRoutes = require('./routes/notes');
 const chatRoutes = require('./routes/chat');
 const userRoutes = require('./routes/users');
+const pyqRoutes = require('./routes/pyq');
+const seniorRoutes = require('./routes/seniors');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 const { initSocket } = require('./utils/socket');
 
 const app = express();
 const server = http.createServer(app);
 
-// Socket.io setup
 const io = new Server(server, {
   cors: {
     origin: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -28,26 +29,24 @@ const io = new Server(server, {
 });
 initSocket(io);
 
-// Middleware
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/pyq', pyqRoutes);
+app.use('/api/seniors', seniorRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'OK', message: 'StudyMart API running' }));
 
-// Error handlers
 app.use(notFound);
 app.use(errorHandler);
 
-// DB connect + start
 const PORT = process.env.PORT || 5000;
 mongoose
   .connect(process.env.MONGO_URI || 'mongodb://localhost:27017/studymart')

@@ -10,10 +10,22 @@ const userSchema = new mongoose.Schema(
     college: { type: String, trim: true },
     location: { type: String, trim: true },
     avatar: { type: String, default: '' },
-    bio: { type: String, maxlength: 300 },
+    bio: { type: String, maxlength: 500 },
     isVerifiedSeller: { type: Boolean, default: false },
     rating: { type: Number, default: 0, min: 0, max: 5 },
     totalReviews: { type: Number, default: 0 },
+
+    // Senior fields
+    isSenior: { type: Boolean, default: false },
+    department: { type: String, trim: true },
+    year: { type: String, trim: true },
+    followersCount: { type: Number, default: 0 },
+    notesCount: { type: Number, default: 0 },
+    pyqCount: { type: Number, default: 0 },
+
+    // Student verification
+    studentIdUrl: { type: String, default: '' },
+    isStudentVerified: { type: Boolean, default: false },
 
     // Monetization (future-ready)
     subscription: {
@@ -34,12 +46,6 @@ userSchema.pre('save', async function (next) {
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
-};
-
-userSchema.methods.toSafeObject = function () {
-  const obj = this.toObject();
-  delete obj.password;
-  return obj;
 };
 
 module.exports = mongoose.model('User', userSchema);

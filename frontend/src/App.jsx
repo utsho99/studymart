@@ -8,6 +8,10 @@ import SellItem from './pages/SellItem'
 import EditListing from './pages/EditListing'
 import Notes from './pages/Notes'
 import UploadNotes from './pages/UploadNotes'
+import PYQBank from './pages/PYQBank'
+import UploadPYQ from './pages/UploadPYQ'
+import FindSenior from './pages/FindSenior'
+import SeniorProfile from './pages/SeniorProfile'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Profile from './pages/Profile'
@@ -27,6 +31,10 @@ export default function App() {
             <Route path="/sell" element={<SellItem />} />
             <Route path="/notes" element={<Notes />} />
             <Route path="/notes/upload" element={<UploadNotes />} />
+            <Route path="/pyq" element={<PYQBank />} />
+            <Route path="/pyq/upload" element={<UploadPYQ />} />
+            <Route path="/seniors" element={<FindSenior />} />
+            <Route path="/seniors/:id" element={<SeniorProfile />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/profile" element={<Profile />} />
@@ -38,7 +46,7 @@ export default function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">Page Not Found</h1>
-                <p className="text-gray-500 mb-6">The page you're looking for doesn't exist.</p>
+                <p className="text-gray-500 mb-6">The page you are looking for does not exist.</p>
                 <a href="/" className="btn-primary">Go Home</a>
               </div>
             } />
