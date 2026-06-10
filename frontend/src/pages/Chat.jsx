@@ -1,11 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { io } from 'socket.io-client'
 import { useAuth } from '../context/AuthContext'
 import api from '../utils/api'
 import { timeAgo } from '../utils/helpers'
-
-let socket = null
 
 export default function Chat() {
   const { conversationId } = useParams()
@@ -23,21 +20,6 @@ export default function Chat() {
   useEffect(() => {
     if (!user) { navigate('/login'); return }
 
-    socket = io('https://studymart-api-ukaq.onrender.com', {
-      query: { userId: user._id },
-      transports: ['websocket', 'polling'],
-    })
-
-    socket.on('newMessage', (msg) => {
-      // Only add messages from OTHER users via socket
-      // Our own messages are already added via REST API response
-      if (msg.sender?._id === user._id || msg.sender === user._id) return
-      setMessages(prev => {
-        if (prev.find(m => m._id === msg._id)) return prev
-        return [...prev, msg]
-      })
-    })
-
     api.get('/chat/conversations').then(res => {
       setConversations(res.data)
       if (conversationId) {
@@ -48,35 +30,29 @@ export default function Chat() {
       }
     })
 
-    return () => {
-      socket?.disconnect()
-      socket = null
-      clearInterval(pollRef.current)
-    }
+    return () => clearInterval(pollRef.current)
   }, [user])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const startPolling = (conv) => {
-    clearInterval(pollRef.current)
-    pollRef.current = setInterval(async () => {
-      if (!activeConvRef.current) return
-      try {
-        const { data } = await api.get(`/chat/conversations/${activeConvRef.current._id}/messages`)
-        setMessages(data)
-      } catch {}
-    }, 3000)
+  const fetchMessages = async (convId) => {
+    try {
+      const { data } = await api.get(`/chat/conversations/${convId}/messages`)
+      setMessages(data)
+    } catch {}
   }
 
   const openConversation = async (conv) => {
+    clearInterval(pollRef.current)
     setActiveConv(conv)
     activeConvRef.current = conv
-    socket?.emit('joinConversation', conv._id)
-    const { data } = await api.get(`/chat/conversations/${conv._id}/messages`)
-    setMessages(data)
-    startPolling(conv)
+    await fetchMessages(conv._id)
+    // Poll every 3 seconds to get new messages from other user
+    pollRef.current = setInterval(() => {
+      if (activeConvRef.current) fetchMessages(activeConvRef.current._id)
+    }, 3000)
   }
 
   const sendMessage = async (e) => {
@@ -85,26 +61,16 @@ export default function Chat() {
     setSending(true)
     const text = newMsg.trim()
     setNewMsg('')
-
     try {
-      const { data } = await api.post(`/chat/conversations/${activeConv._id}/messages`, { text })
-      setMessages(prev => {
-        if (prev.find(m => m._id === data._id)) return prev
-        return [...prev, data]
-      })
-      socket?.emit('sendMessage', {
-        conversationId: activeConv._id,
-        senderId: user._id,
-        text,
-      })
+      await api.post(`/chat/conversations/${activeConv._id}/messages`, { text })
+      // Fetch fresh messages after sending so we see our own message
+      await fetchMessages(activeConv._id)
     } catch {
       setNewMsg(text)
     } finally {
       setSending(false)
     }
   }
-
-  const handleTyping = (e) => setNewMsg(e.target.value)
 
   const getOtherParticipant = (conv) => conv.participants?.find(p => p._id !== user?._id)
 
@@ -199,7 +165,7 @@ export default function Chat() {
                 <input
                   type="text"
                   value={newMsg}
-                  onChange={handleTyping}
+                  onChange={e => setNewMsg(e.target.value)}
                   placeholder="Type a message..."
                   className="flex-1 input text-sm py-2"
                 />
