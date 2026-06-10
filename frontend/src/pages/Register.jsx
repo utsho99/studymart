@@ -15,7 +15,12 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    if (!form.name || !form.email || !form.password || !form.phone || !form.college || !form.location) {
+      setError('All fields are required'); return
+    }
     if (form.password.length < 6) { setError('Password must be at least 6 characters'); return }
+    if (!/^01[3-9]\d{8}$/.test(form.phone)) { setError('Please enter a valid Bangladeshi phone number (e.g. 01712345678)'); return }
+
     setLoading(true)
     try {
       await register(form)
@@ -31,9 +36,7 @@ export default function Register() {
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-xl">S</span>
-          </div>
+          <img src="/studymart-icon.png" alt="StudyMart" className="w-14 h-14 rounded-2xl mx-auto mb-4 object-cover" />
           <h1 className="text-2xl font-bold text-gray-900">Create account</h1>
           <p className="text-gray-500 text-sm mt-1">Join Bangladesh's student marketplace</p>
         </div>
@@ -47,7 +50,7 @@ export default function Register() {
         <form onSubmit={handleSubmit} className="card p-6 space-y-4">
           <div>
             <label className="label">Full Name <span className="text-red-500">*</span></label>
-            <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Your name" className="input" required />
+            <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Your full name" className="input" required />
           </div>
           <div>
             <label className="label">Email <span className="text-red-500">*</span></label>
@@ -58,16 +61,16 @@ export default function Register() {
             <input type="password" name="password" value={form.password} onChange={handleChange} placeholder="Min. 6 characters" className="input" required />
           </div>
           <div>
-            <label className="label">Phone (optional)</label>
-            <input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="01XXXXXXXXX" className="input" />
+            <label className="label">Phone Number <span className="text-red-500">*</span></label>
+            <input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="01XXXXXXXXX" className="input" required />
           </div>
           <div>
-            <label className="label">College / School (optional)</label>
-            <input type="text" name="college" value={form.college} onChange={handleChange} placeholder="Your institution" className="input" />
+            <label className="label">College / University <span className="text-red-500">*</span></label>
+            <input type="text" name="college" value={form.college} onChange={handleChange} placeholder="Your institution name" className="input" required />
           </div>
           <div>
-            <label className="label">Division (optional)</label>
-            <select name="location" value={form.location} onChange={handleChange} className="input">
+            <label className="label">Division <span className="text-red-500">*</span></label>
+            <select name="location" value={form.location} onChange={handleChange} className="input" required>
               <option value="">Select your division</option>
               {DIVISIONS.map(d => <option key={d} value={d}>{d}</option>)}
             </select>

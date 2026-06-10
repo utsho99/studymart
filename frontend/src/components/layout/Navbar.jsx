@@ -24,10 +24,8 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center h-14 gap-3">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-1.5 flex-shrink-0">
-            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">S</span>
-            </div>
+          <Link to="/" className="flex items-center gap-2 flex-shrink-0">
+            <img src="/studymart-icon.png" alt="StudyMart" className="w-8 h-8 rounded-lg object-cover" />
             <span className="font-bold text-gray-900 text-lg hidden sm:block">StudyMart</span>
           </Link>
 
