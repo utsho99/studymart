@@ -16,40 +16,25 @@ export default function Chat() {
   const [activeConv, setActiveConv] = useState(null)
   const [newMsg, setNewMsg] = useState('')
   const [sending, setSending] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef(null)
-  const typingTimeout = useRef(null)
   const activeConvRef = useRef(null)
+  const pollRef = useRef(null)
 
   useEffect(() => {
     if (!user) { navigate('/login'); return }
 
-    // Connect socket
     socket = io('https://studymart-api-ukaq.onrender.com', {
       query: { userId: user._id },
       transports: ['websocket', 'polling'],
     })
 
-    socket.on('connect', () => {
-      console.log('Socket connected:', socket.id)
-      // Rejoin active conversation on reconnect
-      if (activeConvRef.current) {
-        socket.emit('joinConversation', activeConvRef.current._id)
-      }
-    })
-
-  socket.on('newMessage', (msg) => {
+    socket.on('newMessage', (msg) => {
       setMessages(prev => {
-        // Only add if from OTHER user, we already added our own optimistically
-        if (msg.sender?._id === user._id || msg.sender === user._id) return prev
         if (prev.find(m => m._id === msg._id)) return prev
         return [...prev, msg]
       })
     })
-    socket.on('userTyping', () => setIsTyping(true))
-    socket.on('userStoppedTyping', () => setIsTyping(false))
 
-    // Load conversations
     api.get('/chat/conversations').then(res => {
       setConversations(res.data)
       if (conversationId) {
@@ -63,6 +48,7 @@ export default function Chat() {
     return () => {
       socket?.disconnect()
       socket = null
+      clearInterval(pollRef.current)
     }
   }, [user])
 
@@ -70,12 +56,24 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  const startPolling = (conv) => {
+    clearInterval(pollRef.current)
+    pollRef.current = setInterval(async () => {
+      if (!activeConvRef.current) return
+      try {
+        const { data } = await api.get(`/chat/conversations/${activeConvRef.current._id}/messages`)
+        setMessages(data)
+      } catch {}
+    }, 3000)
+  }
+
   const openConversation = async (conv) => {
     setActiveConv(conv)
     activeConvRef.current = conv
     socket?.emit('joinConversation', conv._id)
     const { data } = await api.get(`/chat/conversations/${conv._id}/messages`)
     setMessages(data)
+    startPolling(conv)
   }
 
   const sendMessage = async (e) => {
@@ -85,53 +83,27 @@ export default function Chat() {
     const text = newMsg.trim()
     setNewMsg('')
 
-    // Optimistically add message to UI
-    const tempMsg = {
-      _id: Date.now().toString(),
-      text,
-      sender: { _id: user._id, name: user.name, avatar: user.avatar },
-      createdAt: new Date().toISOString(),
-      conversation: activeConv._id,
-    }
-    setMessages(prev => [...prev, tempMsg])
-
-    // Send via REST API (reliable) + socket for real-time to other user
     try {
-     const { data } = await api.post(`/chat/conversations/${activeConv._id}/messages`, { text })
-      // Replace temp message with real one from server
-      setMessages(prev => prev.map(m => m._id === tempMsg._id ? data : m))
-      // Emit via socket so OTHER user gets it instantly (not ourselves)
+      const { data } = await api.post(`/chat/conversations/${activeConv._id}/messages`, { text })
+      setMessages(prev => {
+        if (prev.find(m => m._id === data._id)) return prev
+        return [...prev, data]
+      })
       socket?.emit('sendMessage', {
         conversationId: activeConv._id,
         senderId: user._id,
         text,
-        messageId: data._id,
       })
     } catch {
-      // Remove temp message on error
-      setMessages(prev => prev.filter(m => m._id !== tempMsg._id))
+      setNewMsg(text)
+    } finally {
       setSending(false)
-      return
-    }
-
-    socket?.emit('stopTyping', { conversationId: activeConv._id })
-    setSending(false)
-  }
-
-  const handleTyping = (e) => {
-    setNewMsg(e.target.value)
-    if (activeConv) {
-      socket?.emit('typing', { conversationId: activeConv._id, userId: user._id })
-      clearTimeout(typingTimeout.current)
-      typingTimeout.current = setTimeout(() => {
-        socket?.emit('stopTyping', { conversationId: activeConv._id })
-      }, 1500)
     }
   }
 
-  const getOtherParticipant = (conv) => {
-    return conv.participants?.find(p => p._id !== user?._id)
-  }
+  const handleTyping = (e) => setNewMsg(e.target.value)
+
+  const getOtherParticipant = (conv) => conv.participants?.find(p => p._id !== user?._id)
 
   if (!user) return null
 
@@ -172,8 +144,7 @@ export default function Chat() {
             <>
               {/* Header */}
               <div className="p-3 border-b border-gray-200 flex items-center gap-3">
-                {/* Back button on mobile */}
-                <button onClick={() => setActiveConv(null)} className="md:hidden text-gray-400 hover:text-gray-600 mr-1">
+                <button onClick={() => { setActiveConv(null); clearInterval(pollRef.current) }} className="md:hidden text-gray-400 hover:text-gray-600 mr-1">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
@@ -182,7 +153,7 @@ export default function Chat() {
                   const other = getOtherParticipant(activeConv)
                   return (
                     <>
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm flex-shrink-0">
                         {other?.name?.charAt(0).toUpperCase()}
                       </div>
                       <div>
@@ -201,6 +172,11 @@ export default function Chat() {
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {messages.length === 0 && (
+                  <div className="text-center text-gray-400 text-sm mt-8">
+                    No messages yet. Say hello! 👋
+                  </div>
+                )}
                 {messages.map((msg, i) => {
                   const isMe = msg.sender?._id === user._id || msg.sender === user._id
                   return (
@@ -212,11 +188,6 @@ export default function Chat() {
                     </div>
                   )
                 })}
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-100 rounded-2xl px-3 py-2 text-sm text-gray-500">typing...</div>
-                  </div>
-                )}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -228,11 +199,10 @@ export default function Chat() {
                   onChange={handleTyping}
                   placeholder="Type a message..."
                   className="flex-1 input text-sm py-2"
-                  autoFocus
                 />
                 <button type="submit" disabled={!newMsg.trim() || sending}
                   className="btn-primary px-4 py-2 text-sm flex-shrink-0">
-                  Send
+                  {sending ? '...' : 'Send'}
                 </button>
               </form>
             </>
