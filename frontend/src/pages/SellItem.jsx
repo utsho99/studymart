@@ -41,9 +41,16 @@ export default function SellItem() {
 
     setLoading(true)
     try {
-      const fd = new FormData()
-      Object.entries(form).forEach(([k, v]) => fd.append(k, v))
-      previews.forEach(p => fd.append('images', p.file))
+     const fd = new FormData()
+fd.append('title', form.title)
+fd.append('description', form.description)
+fd.append('price', form.isFree ? 0 : Number(form.price))
+fd.append('category', form.category)
+fd.append('condition', form.condition)
+fd.append('location', form.location)
+fd.append('isFree', form.isFree ? 'true' : 'false')
+fd.append('isNegotiable', form.isNegotiable ? 'true' : 'false')
+previews.forEach(p => fd.append('images', p.file))
 
       const { data } = await api.post('/listings', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       navigate(`/listings/${data._id}`)

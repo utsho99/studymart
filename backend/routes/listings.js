@@ -53,13 +53,15 @@ router.post('/', protect, uploadImages.array('images', 5), async (req, res) => {
   }
 
   const images = req.files ? req.files.map((f) => `/uploads/images/${f.filename}`) : [];
+  const isFreeItem = isFree === 'true';
+  const isNegotiableItem = isNegotiable === 'true';
 
   const listing = await Listing.create({
     title,
     description,
-    price: isFree ? 0 : Number(price),
-    isFree: !!isFree,
-    isNegotiable: !!isNegotiable,
+    price: isFreeItem ? 0 : Number(price),
+    isFree: isFreeItem,
+    isNegotiable: isNegotiableItem,
     category,
     condition,
     location,

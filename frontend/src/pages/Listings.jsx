@@ -1,168 +1,173 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import api from '../utils/api'
-import ListingCard from '../components/common/ListingCard'
 import { CATEGORIES, CONDITIONS, DIVISIONS } from '../utils/helpers'
 
-export default function Listings() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [listings, setListings] = useState([])
-  const [total, setTotal] = useState(0)
-  const [pages, setPages] = useState(1)
-  const [loading, setLoading] = useState(true)
-  const [showFilters, setShowFilters] = useState(false)
+export default function SellItem() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [previews, setPreviews] = useState([])
+  const [form, setForm] = useState({
+    title: '', description: '', price: '', category: '', condition: '',
+    location: '', isNegotiable: false, isFree: false,
+  })
 
-  const currentPage = parseInt(searchParams.get('page') || '1')
-  const filters = {
-    search: searchParams.get('search') || '',
-    category: searchParams.get('category') || '',
-    condition: searchParams.get('condition') || '',
-    location: searchParams.get('location') || '',
-    minPrice: searchParams.get('minPrice') || '',
-    maxPrice: searchParams.get('maxPrice') || '',
-    sort: searchParams.get('sort') || 'newest',
+  if (!user) {
+    navigate('/login')
+    return null
   }
 
-  const fetchListings = useCallback(async () => {
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+  }
+
+  const handleImages = (e) => {
+    const files = Array.from(e.target.files)
+    if (files.length > 5) { setError('Maximum 5 images allowed'); return }
+    setPreviews(files.map(f => ({ file: f, url: URL.createObjectURL(f) })))
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    if (!form.title || !form.description || !form.category || !form.condition || !form.location) {
+      setError('Please fill all required fields'); return
+    }
+    if (!form.isFree && !form.price) { setError('Please enter a price or mark as free'); return }
+
     setLoading(true)
-    const params = new URLSearchParams()
-    Object.entries({ ...filters, page: currentPage, limit: 20 }).forEach(([k, v]) => { if (v) params.set(k, v) })
     try {
-      const { data } = await api.get(`/listings?${params}`)
-      setListings(data.listings)
-      setTotal(data.total)
-      setPages(data.pages)
+      const fd = new FormData()
+      fd.append('title', form.title)
+      fd.append('description', form.description)
+      fd.append('price', form.isFree ? 0 : Number(form.price))
+      fd.append('category', form.category)
+      fd.append('condition', form.condition)
+      fd.append('location', form.location)
+      fd.append('isFree', form.isFree ? 'true' : 'false')
+      fd.append('isNegotiable', form.isNegotiable ? 'true' : 'false')
+      previews.forEach(p => fd.append('images', p.file))
+
+      const { data } = await api.post('/listings', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      navigate(`/listings/${data._id}`)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create listing')
     } finally {
       setLoading(false)
     }
-  }, [searchParams])
-
-  useEffect(() => { fetchListings() }, [fetchListings])
-
-  const updateFilter = (key, value) => {
-    const p = new URLSearchParams(searchParams)
-    if (value) p.set(key, value); else p.delete(key)
-    p.delete('page')
-    setSearchParams(p)
   }
 
-  const clearFilters = () => setSearchParams({})
-
-  const activeFiltersCount = [filters.category, filters.condition, filters.location, filters.minPrice, filters.maxPrice].filter(Boolean).length
-
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24 md:pb-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">
-            {filters.search ? `Results for "${filters.search}"` : filters.category || 'All Listings'}
-          </h1>
-          {!loading && <p className="text-sm text-gray-500">{total} items found</p>}
-        </div>
-        <div className="flex items-center gap-2">
-          <select value={filters.sort} onChange={e => updateFilter('sort', e.target.value)} className="input text-sm py-1.5 w-auto">
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="priceAsc">Price: Low to High</option>
-            <option value="priceDesc">Price: High to Low</option>
-          </select>
-          <button onClick={() => setShowFilters(!showFilters)}
-            className={`btn-secondary text-sm py-1.5 relative ${activeFiltersCount > 0 ? 'border-blue-400 text-blue-600' : ''}`}>
-            <svg className="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 6.707A1 1 0 013 6V4z" />
-            </svg>
-            Filters {activeFiltersCount > 0 && <span className="ml-1 bg-blue-600 text-white rounded-full px-1.5 py-0.5 text-xs">{activeFiltersCount}</span>}
-          </button>
-        </div>
-      </div>
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-8">
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Post a Listing</h1>
 
-      {/* Filters Panel */}
-      {showFilters && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 mb-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm mb-5">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="card p-5 space-y-4">
+          <h2 className="font-semibold text-gray-900">Item Details</h2>
+
           <div>
-            <label className="label">Category</label>
-            <select value={filters.category} onChange={e => updateFilter('category', e.target.value)} className="input text-sm">
-              <option value="">All Categories</option>
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <label className="label">Title <span className="text-red-500">*</span></label>
+            <input type="text" name="title" value={form.title} onChange={handleChange} placeholder="e.g. HSC Physics 1st Paper - Hakim" className="input" maxLength={150} />
           </div>
-          <div>
-            <label className="label">Condition</label>
-            <select value={filters.condition} onChange={e => updateFilter('condition', e.target.value)} className="input text-sm">
-              <option value="">Any Condition</option>
-              {CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Category <span className="text-red-500">*</span></label>
+              <select name="category" value={form.category} onChange={handleChange} className="input">
+                <option value="">Select category</option>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Condition <span className="text-red-500">*</span></label>
+              <select name="condition" value={form.condition} onChange={handleChange} className="input">
+                <option value="">Select condition</option>
+                {CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
           </div>
+
           <div>
-            <label className="label">Location</label>
-            <select value={filters.location} onChange={e => updateFilter('location', e.target.value)} className="input text-sm">
-              <option value="">All Locations</option>
+            <label className="label">Description <span className="text-red-500">*</span></label>
+            <textarea name="description" value={form.description} onChange={handleChange} rows={4} placeholder="Describe the item — edition, any marks, why selling..." className="input resize-none" maxLength={2000} />
+            <p className="text-xs text-gray-400 mt-1">{form.description.length}/2000</p>
+          </div>
+        </div>
+
+        <div className="card p-5 space-y-4">
+          <h2 className="font-semibold text-gray-900">Pricing</h2>
+
+          <div className="flex items-center gap-3 mb-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="isFree" checked={form.isFree} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded" />
+              <span className="text-sm text-gray-700 font-medium">Give away for free</span>
+            </label>
+          </div>
+
+          {!form.isFree && (
+            <div>
+              <label className="label">Price (৳) <span className="text-red-500">*</span></label>
+              <input type="number" name="price" value={form.price} onChange={handleChange} placeholder="Enter price in BDT" className="input" min={0} />
+            </div>
+          )}
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="isNegotiable" checked={form.isNegotiable} onChange={handleChange} disabled={form.isFree} className="w-4 h-4 text-blue-600 rounded" />
+            <span className="text-sm text-gray-700">Price is negotiable</span>
+          </label>
+        </div>
+
+        <div className="card p-5 space-y-4">
+          <h2 className="font-semibold text-gray-900">Location</h2>
+          <div>
+            <label className="label">Division / Location <span className="text-red-500">*</span></label>
+            <select name="location" value={form.location} onChange={handleChange} className="input">
+              <option value="">Select division</option>
               {DIVISIONS.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
-          <div>
-            <label className="label">Min Price (৳)</label>
-            <input type="number" value={filters.minPrice} onChange={e => updateFilter('minPrice', e.target.value)} placeholder="0" className="input text-sm" />
-          </div>
-          <div>
-            <label className="label">Max Price (৳)</label>
-            <input type="number" value={filters.maxPrice} onChange={e => updateFilter('maxPrice', e.target.value)} placeholder="Any" className="input text-sm" />
-          </div>
-          {activeFiltersCount > 0 && (
-            <div className="col-span-full">
-              <button onClick={clearFilters} className="text-sm text-red-500 hover:text-red-700 font-medium">✕ Clear all filters</button>
-            </div>
-          )}
         </div>
-      )}
 
-      {/* Category Pills */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-5 scrollbar-none">
-        {['', ...CATEGORIES].map(cat => (
-          <button key={cat || 'all'} onClick={() => updateFilter('category', cat)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${filters.category === cat ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'}`}>
-            {cat || 'All'}
-          </button>
-        ))}
-      </div>
+        <div className="card p-5 space-y-4">
+          <h2 className="font-semibold text-gray-900">Photos (Optional)</h2>
+          <p className="text-xs text-gray-500">Up to 5 photos. Listings with photos get 3x more responses.</p>
 
-      {/* Listings Grid */}
-      {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="card animate-pulse">
-              <div className="aspect-[4/3] bg-gray-200 rounded-t-xl" />
-              <div className="p-3 space-y-2"><div className="h-4 bg-gray-200 rounded w-3/4" /><div className="h-4 bg-gray-200 rounded w-1/3" /></div>
-            </div>
-          ))}
-        </div>
-      ) : listings.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-5xl mb-4">🔍</p>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No listings found</h3>
-          <p className="text-gray-500 text-sm mb-4">Try different keywords or clear the filters</p>
-          <button onClick={clearFilters} className="btn-secondary text-sm">Clear filters</button>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {listings.map(l => <ListingCard key={l._id} listing={l} />)}
-          </div>
+          <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+            <input type="file" accept="image/*" multiple onChange={handleImages} className="hidden" />
+            <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="text-sm text-gray-600">Click to add photos</p>
+            <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP up to 5MB each</p>
+          </label>
 
-          {/* Pagination */}
-          {pages > 1 && (
-            <div className="flex justify-center gap-2 mt-8">
-              {[...Array(pages)].map((_, i) => (
-                <button key={i} onClick={() => updateFilter('page', i + 1)}
-                  className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${currentPage === i + 1 ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
-                  {i + 1}
-                </button>
+          {previews.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {previews.map((p, i) => (
+                <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200">
+                  <img src={p.url} alt="" className="w-full h-full object-cover" />
+                  <button type="button" onClick={() => setPreviews(prev => prev.filter((_, j) => j !== i))}
+                    className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">✕</button>
+                </div>
               ))}
             </div>
           )}
-        </>
-      )}
+        </div>
+
+        <button type="submit" disabled={loading} className="w-full btn-primary py-3 text-base">
+          {loading ? 'Posting...' : 'Post Listing'}
+        </button>
+      </form>
     </div>
   )
 }
