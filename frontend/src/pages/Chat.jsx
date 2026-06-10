@@ -29,6 +29,9 @@ export default function Chat() {
     })
 
     socket.on('newMessage', (msg) => {
+      // Only add messages from OTHER users via socket
+      // Our own messages are already added via REST API response
+      if (msg.sender?._id === user._id || msg.sender === user._id) return
       setMessages(prev => {
         if (prev.find(m => m._id === msg._id)) return prev
         return [...prev, msg]
