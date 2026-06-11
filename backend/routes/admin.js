@@ -3,26 +3,20 @@ const router = express.Router();
 const User = require('../models/User');
 const Listing = require('../models/Listing');
 const Report = require('../models/Report');
-const Rating = require('../models/Rating');
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'utshogoateddev1';
 const ADMIN_TOKEN = Buffer.from(ADMIN_PASSWORD).toString('base64');
 
-// Admin auth middleware
 const adminAuth = (req, res, next) => {
   const token = req.headers['x-admin-token'];
-  if (!token || token !== ADMIN_TOKEN) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
+  if (!token || token !== ADMIN_TOKEN) return res.status(401).json({ message: 'Unauthorized' });
   next();
 };
 
 // POST /api/admin/login
 router.post('/login', (req, res) => {
   const { password } = req.body;
-  if (password !== ADMIN_PASSWORD) {
-    return res.status(401).json({ message: 'Wrong password' });
-  }
+  if (password !== ADMIN_PASSWORD) return res.status(401).json({ message: 'Wrong password' });
   res.json({ token: ADMIN_TOKEN });
 });
 
@@ -31,7 +25,7 @@ router.get('/stats', adminAuth, async (req, res) => {
   const [totalUsers, totalListings, pendingVerifications, pendingReports] = await Promise.all([
     User.countDocuments(),
     Listing.countDocuments({ isActive: true }),
-    User.countDocuments({ studentIdUrl: { $ne: '' }, isStudentVerified: false }),
+    User.countDocuments({ studentIdUrl: { $exists: true, $ne: '' }, isStudentVerified: false }),
     Report.countDocuments({ status: 'pending' }),
   ]);
   res.json({ totalUsers, totalListings, pendingVerifications, pendingReports });
@@ -40,8 +34,8 @@ router.get('/stats', adminAuth, async (req, res) => {
 // GET /api/admin/verifications
 router.get('/verifications', adminAuth, async (req, res) => {
   const users = await User.find({
-    studentIdUrl: { $ne: '' },
-    isStudentVerified: false
+    studentIdUrl: { $exists: true, $ne: '' },
+    isStudentVerified: false,
   }).select('name email college location studentIdUrl createdAt').sort({ createdAt: -1 });
   res.json(users);
 });
@@ -71,7 +65,9 @@ router.get('/reports', adminAuth, async (req, res) => {
 // PATCH /api/admin/reports/:id
 router.patch('/reports/:id', adminAuth, async (req, res) => {
   const { action } = req.body;
-  const report = await Report.findById(req.params.id).populate('reportedUser').populate('reportedListing');
+  const report = await Report.findById(req.params.id)
+    .populate('reportedUser')
+    .populate('reportedListing');
   if (!report) return res.status(404).json({ message: 'Report not found' });
 
   if (action === 'ban_user' && report.reportedUser) {
@@ -90,12 +86,11 @@ router.get('/users', adminAuth, async (req, res) => {
   const { page = 1, search } = req.query;
   const query = {};
   if (search) query.$or = [{ name: new RegExp(search, 'i') }, { email: new RegExp(search, 'i') }];
-  const users = await User.find(query)
-    .select('name email college location isStudentVerified isVerifiedSeller isBanned createdAt')
-    .sort({ createdAt: -1 })
-    .skip((page - 1) * 20)
-    .limit(20);
-  const total = await User.countDocuments(query);
+  const [users, total] = await Promise.all([
+    User.find(query).select('name email college location isStudentVerified isVerifiedSeller isBanned isSenior createdAt')
+      .sort({ createdAt: -1 }).skip((page - 1) * 20).limit(20),
+    User.countDocuments(query),
+  ]);
   res.json({ users, total });
 });
 
@@ -122,18 +117,17 @@ router.get('/listings', adminAuth, async (req, res) => {
   const { page = 1, search } = req.query;
   const query = {};
   if (search) query.title = new RegExp(search, 'i');
-  const listings = await Listing.find(query)
-    .populate('seller', 'name email')
-    .sort({ createdAt: -1 })
-    .skip((page - 1) * 20)
-    .limit(20);
-  const total = await Listing.countDocuments(query);
+  const [listings, total] = await Promise.all([
+    Listing.find(query).populate('seller', 'name email').sort({ createdAt: -1 })
+      .skip((page - 1) * 20).limit(20),
+    Listing.countDocuments(query),
+  ]);
   res.json({ listings, total });
 });
 
 // DELETE /api/admin/listings/:id
 router.delete('/listings/:id', adminAuth, async (req, res) => {
-  await Listing.findByIdAndUpdate(req.params.id, { isActive: false, isSold: true });
+  await Listing.findByIdAndUpdate(req.params.id, { isActive: false });
   res.json({ message: 'Listing removed' });
 });
 

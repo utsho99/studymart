@@ -68,6 +68,13 @@ export default function FindSenior() {
       await api.post('/seniors/become', becomeForm)
       setShowBecomeModal(false)
       window.location.reload()
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed'
+      if (msg.includes('verify')) {
+        setShowBecomeModal(false)
+        navigate('/verify-student')
+      }
+      alert(msg)
     } finally {
       setBecoming(false)
     }
