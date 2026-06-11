@@ -1,3 +1,4 @@
+// StudyMart App v6 - routing fix
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import Navbar from './components/layout/Navbar'
@@ -28,25 +29,25 @@ function Layout() {
       {!isAdmin && <Navbar />}
       <main>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/listings" element={<Listings />} />
-          <Route path="/listings/:id/edit" element={<EditListing />} />
-          <Route path="/listings/:id" element={<ListingDetail />} />
-          <Route path="/sell" element={<SellItem />} />
-          <Route path="/notes" element={<Notes />} />
-          <Route path="/notes/upload" element={<UploadNotes />} />
-          <Route path="/pyq" element={<PYQBank />} />
-          <Route path="/pyq/upload" element={<UploadPYQ />} />
-          <Route path="/seniors" element={<FindSenior />} />
-          <Route path="/seniors/:id" element={<SeniorProfile />} />
-          <Route path="/users/:id" element={<SellerProfile />} />
-          <Route path="/verify-student" element={<StudentVerification />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/chat/:conversationId" element={<Chat />} />
-          <Route path="/admin" element={<Admin />} />
+          <Route index element={<Home />} />
+          <Route path="listings" element={<Listings />} />
+          <Route path="listings/:id/edit" element={<EditListing />} />
+          <Route path="listings/:id" element={<ListingDetail />} />
+          <Route path="sell" element={<SellItem />} />
+          <Route path="notes" element={<Notes />} />
+          <Route path="notes/upload" element={<UploadNotes />} />
+          <Route path="pyq" element={<PYQBank />} />
+          <Route path="pyq/upload" element={<UploadPYQ />} />
+          <Route path="seniors" element={<FindSenior />} />
+          <Route path="seniors/:id" element={<SeniorProfile />} />
+          <Route path="users/:id" element={<SellerProfile />} />
+          <Route path="verify-student" element={<StudentVerification />} />
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="chat" element={<Chat />} />
+          <Route path="chat/:conversationId" element={<Chat />} />
+          <Route path="admin" element={<Admin />} />
           <Route path="*" element={
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
               <svg className="w-20 h-20 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -67,7 +68,9 @@ export default function App() {
   return (
     <AuthProvider>
       <div className="min-h-screen bg-gray-50">
-        <Layout />
+        <Routes>
+          <Route path="/*" element={<Layout />} />
+        </Routes>
       </div>
     </AuthProvider>
   )
