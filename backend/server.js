@@ -22,10 +22,7 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    methods: ['GET', 'POST'],
-  },
+  cors: { origin: process.env.CLIENT_URL || 'http://localhost:5173', methods: ['GET', 'POST'] },
 });
 initSocket(io);
 
@@ -54,9 +51,6 @@ mongoose
     console.log('✅ MongoDB connected');
     server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   })
-  .catch((err) => {
-    console.error('❌ MongoDB connection error:', err);
-    process.exit(1);
-  });
+  .catch((err) => { console.error('❌ MongoDB connection error:', err); process.exit(1); });
 
 module.exports = { app, io };

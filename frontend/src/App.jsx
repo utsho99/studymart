@@ -12,6 +12,8 @@ import PYQBank from './pages/PYQBank'
 import UploadPYQ from './pages/UploadPYQ'
 import FindSenior from './pages/FindSenior'
 import SeniorProfile from './pages/SeniorProfile'
+import SellerProfile from './pages/SellerProfile'
+import StudentVerification from './pages/StudentVerification'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Profile from './pages/Profile'
@@ -26,8 +28,8 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/listings" element={<Listings />} />
-            <Route path="/listings/:id" element={<ListingDetail />} />
             <Route path="/listings/:id/edit" element={<EditListing />} />
+            <Route path="/listings/:id" element={<ListingDetail />} />
             <Route path="/sell" element={<SellItem />} />
             <Route path="/notes" element={<Notes />} />
             <Route path="/notes/upload" element={<UploadNotes />} />
@@ -35,6 +37,8 @@ export default function App() {
             <Route path="/pyq/upload" element={<UploadPYQ />} />
             <Route path="/seniors" element={<FindSenior />} />
             <Route path="/seniors/:id" element={<SeniorProfile />} />
+            <Route path="/users/:id" element={<SellerProfile />} />
+            <Route path="/verify-student" element={<StudentVerification />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/profile" element={<Profile />} />

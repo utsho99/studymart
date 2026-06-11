@@ -122,7 +122,7 @@ export default function Profile() {
       )}
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         <Link to="/sell" className="card p-4 text-center hover:border-blue-300 group">
           <div className="text-2xl mb-1">➕</div>
           <p className="text-sm font-medium text-gray-700 group-hover:text-blue-600">Post Listing</p>
@@ -134,6 +134,10 @@ export default function Profile() {
         <Link to="/notes/upload" className="card p-4 text-center hover:border-blue-300 group">
           <div className="text-2xl mb-1">📝</div>
           <p className="text-sm font-medium text-gray-700 group-hover:text-blue-600">Upload Notes</p>
+        </Link>
+        <Link to="/verify-student" className="card p-4 text-center hover:border-green-300 group">
+          <div className="text-2xl mb-1">{user.isStudentVerified ? '✅' : '🪪'}</div>
+          <p className="text-sm font-medium text-gray-700 group-hover:text-green-600">{user.isStudentVerified ? 'Verified' : 'Verify ID'}</p>
         </Link>
         <button onClick={logout} className="card p-4 text-center hover:border-red-300 group">
           <div className="text-2xl mb-1">🚪</div>
