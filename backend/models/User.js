@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema(
     isVerifiedSeller: { type: Boolean, default: false },
     rating: { type: Number, default: 0, min: 0, max: 5 },
     totalReviews: { type: Number, default: 0 },
+    isBanned: { type: Boolean, default: false },
 
     // Senior fields
     isSenior: { type: Boolean, default: false },
@@ -26,6 +27,10 @@ const userSchema = new mongoose.Schema(
     // Student verification
     studentIdUrl: { type: String, default: '' },
     isStudentVerified: { type: Boolean, default: false },
+
+    // Password reset
+    resetCode: { type: String, select: false },
+    resetCodeExpiry: { type: Date, select: false },
 
     // Monetization (future-ready)
     subscription: {

@@ -1,4 +1,4 @@
-// StudyMart App v6 - routing fix
+// StudyMart v7
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import Navbar from './components/layout/Navbar'
@@ -17,6 +17,7 @@ import SellerProfile from './pages/SellerProfile'
 import StudentVerification from './pages/StudentVerification'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
 import Profile from './pages/Profile'
 import Chat from './pages/Chat'
 import Admin from './pages/Admin'
@@ -44,6 +45,7 @@ function Layout() {
           <Route path="verify-student" element={<StudentVerification />} />
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="profile" element={<Profile />} />
           <Route path="chat" element={<Chat />} />
           <Route path="chat/:conversationId" element={<Chat />} />
