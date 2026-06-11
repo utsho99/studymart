@@ -15,6 +15,7 @@ const chatRoutes = require('./routes/chat');
 const userRoutes = require('./routes/users');
 const pyqRoutes = require('./routes/pyq');
 const seniorRoutes = require('./routes/seniors');
+const adminRoutes = require('./routes/admin');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 const { initSocket } = require('./utils/socket');
 
@@ -38,6 +39,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/pyq', pyqRoutes);
 app.use('/api/seniors', seniorRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'OK', message: 'StudyMart API running' }));
 
