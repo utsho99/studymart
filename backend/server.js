@@ -27,7 +27,15 @@ const io = new Server(server, {
 });
 initSocket(io);
 
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }));
+app.use(cors({
+  origin: [
+    'https://studymartbd.shop',
+    'https://www.studymartbd.shop',
+    'https://studymart-nine.vercel.app',
+    'http://localhost:5173',
+  ],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
