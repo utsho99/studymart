@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { Message, Conversation } = require('../models/Message');
 const { protect } = require('../middleware/authMiddleware');
+const { createNotification } = require('../utils/notifications');
 
 // GET /api/chat/conversations
 router.get('/conversations', protect, async (req, res) => {
@@ -12,7 +13,7 @@ router.get('/conversations', protect, async (req, res) => {
   res.json(conversations);
 });
 
-// GET /api/chat/unread - total unread count for notification badge
+// GET /api/chat/unread
 router.get('/unread', protect, async (req, res) => {
   const count = await Message.countDocuments({
     conversation: {
@@ -81,6 +82,20 @@ router.post('/conversations/:id/messages', protect, async (req, res) => {
   const message = await Message.create({ conversation: req.params.id, sender: req.user._id, text });
   await Conversation.findByIdAndUpdate(req.params.id, { lastMessage: text, lastMessageAt: new Date() });
   await message.populate('sender', 'name avatar');
+
+  // Notify other participants
+  const recipientId = conversation.participants.find(p => p.toString() !== req.user._id.toString());
+  if (recipientId) {
+    createNotification({
+      recipientId,
+      senderId: req.user._id,
+      type: 'message',
+      title: `New message from ${req.user.name}`,
+      body: text.length > 60 ? text.substring(0, 60) + '...' : text,
+      link: `/chat/${conversation._id}`,
+    }).catch(() => {});
+  }
+
   res.status(201).json(message);
 });
 

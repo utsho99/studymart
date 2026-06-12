@@ -6,6 +6,8 @@ const Rating = require('../models/Rating');
 const Block = require('../models/Block');
 const Report = require('../models/Report');
 const { protect, optionalAuth } = require('../middleware/authMiddleware');
+const { createNotification } = require('../utils/notifications');
+const { createNotification } = require('../utils/notifications');
 const { uploadImages, uploadToCloudinary } = require('../middleware/uploadMiddleware');
 
 // GET /api/users/:id - public profile
@@ -56,6 +58,7 @@ router.post('/:id/rate', protect, async (req, res) => {
   const allRatings = await Rating.find({ seller: req.params.id });
   const avg = allRatings.reduce((a, b) => a + b.stars, 0) / allRatings.length;
   await User.findByIdAndUpdate(req.params.id, { rating: Math.round(avg * 10) / 10, totalReviews: allRatings.length });
+  createNotification({ recipientId: req.params.id, senderId: req.user._id, type: 'rating', title: `${req.user.name} rated you ${stars} stars`, body: comment || 'You received a new rating!', link: `/users/${req.params.id}` }).catch(() => {});
 
   res.json({ message: 'Rating submitted!' });
 });

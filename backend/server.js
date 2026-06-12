@@ -16,6 +16,7 @@ const userRoutes = require('./routes/users');
 const pyqRoutes = require('./routes/pyq');
 const seniorRoutes = require('./routes/seniors');
 const adminRoutes = require('./routes/admin');
+const notificationRoutes = require('./routes/notifications');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 const { initSocket } = require('./utils/socket');
 
@@ -27,15 +28,7 @@ const io = new Server(server, {
 });
 initSocket(io);
 
-app.use(cors({
-  origin: [
-    'https://studymartbd.shop',
-    'https://www.studymartbd.shop',
-    'https://studymart-nine.vercel.app',
-    'http://localhost:5173',
-  ],
-  credentials: true
-}));
+app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -48,6 +41,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/pyq', pyqRoutes);
 app.use('/api/seniors', seniorRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'OK', message: 'StudyMart API running' }));
 

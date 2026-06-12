@@ -32,7 +32,10 @@ const userSchema = new mongoose.Schema(
     resetCode: { type: String, select: false },
     resetCodeExpiry: { type: Date, select: false },
 
-    // Monetization (future-ready)
+    // Push notification FCM token
+    fcmToken: { type: String, default: '' },
+
+    // Monetization
     subscription: {
       plan: { type: String, enum: ['free', 'premium'], default: 'free' },
       expiresAt: { type: Date },

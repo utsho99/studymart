@@ -6,6 +6,7 @@ const Note = require('../models/Note');
 const PYQ = require('../models/PYQ');
 const Rating = require('../models/Rating');
 const { protect, optionalAuth } = require('../middleware/authMiddleware');
+const { createNotification } = require('../utils/notifications');
 
 // GET /api/seniors
 router.get('/', optionalAuth, async (req, res) => {
@@ -69,6 +70,7 @@ router.post('/:id/follow', protect, async (req, res) => {
 
   await Follow.create({ follower: req.user._id, following: req.params.id });
   await User.findByIdAndUpdate(req.params.id, { $inc: { followersCount: 1 } });
+  createNotification({ recipientId: req.params.id, senderId: req.user._id, type: 'follow', title: `${req.user.name} started following you`, body: 'You have a new follower!', link: `/users/${req.user._id}` }).catch(() => {});
   res.json({ following: true, message: 'Following!' });
 });
 
