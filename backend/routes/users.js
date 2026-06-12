@@ -7,7 +7,6 @@ const Block = require('../models/Block');
 const Report = require('../models/Report');
 const { protect, optionalAuth } = require('../middleware/authMiddleware');
 const { createNotification } = require('../utils/notifications');
-const { createNotification } = require('../utils/notifications');
 const { uploadImages, uploadToCloudinary } = require('../middleware/uploadMiddleware');
 
 // GET /api/users/:id - public profile
