@@ -110,13 +110,13 @@ export default function Home() {
           <h2 className="text-lg font-bold text-gray-900 mb-4">Browse by Category</h2>
           <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
             {CATEGORIES.map(cat => (
-              <Link key={cat} to={`/listings?category=${cat}`}
+              <button key={cat} onClick={() => navigate(`/listings?category=${encodeURIComponent(cat)}`)}
                 className="flex flex-col items-center gap-2 p-3 bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
                 <div className="text-gray-500 group-hover:text-blue-600 transition-colors">
                   {CategoryIcons[cat]}
                 </div>
                 <span className="text-xs font-medium text-gray-700 group-hover:text-blue-600 text-center leading-tight">{cat}</span>
-              </Link>
+              </button>
             ))}
           </div>
         </section>
