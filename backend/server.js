@@ -17,6 +17,7 @@ const pyqRoutes = require('./routes/pyq');
 const seniorRoutes = require('./routes/seniors');
 const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
+const lostFoundRoutes = require('./routes/lostfound');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 const { initSocket } = require('./utils/socket');
 
@@ -42,8 +43,21 @@ app.use('/api/pyq', pyqRoutes);
 app.use('/api/seniors', seniorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/lostfound', lostFoundRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'OK', message: 'StudyMart API running' }));
+
+app.get('/api/stats', async (req, res) => {
+  try {
+    const User = require('./models/User');
+    const Listing = require('./models/Listing');
+    const [users, listings] = await Promise.all([
+      User.countDocuments(),
+      Listing.countDocuments({ isActive: true }),
+    ]);
+    res.json({ users, listings });
+  } catch { res.json({ users: 0, listings: 0 }); }
+});
 
 app.use(notFound);
 app.use(errorHandler);

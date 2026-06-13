@@ -22,6 +22,8 @@ import Profile from './pages/Profile'
 import Chat from './pages/Chat'
 import Admin from './pages/Admin'
 import Notifications from './pages/Notifications'
+import LostFound from './pages/LostFound'
+import GPACalculator from './pages/GPACalculator'
 
 function Layout() {
   const location = useLocation()
@@ -52,6 +54,8 @@ function Layout() {
           <Route path="/chat" element={<Chat />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/lost-found" element={<LostFound />} />
+          <Route path="/gpa" element={<GPACalculator />} />
           <Route path="*" element={
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
               <svg className="w-20 h-20 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
