@@ -18,6 +18,8 @@ const seniorRoutes = require('./routes/seniors');
 const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
 const lostFoundRoutes = require('./routes/lostfound');
+const likesRoutes = require('./routes/likes');
+const tuitionRoutes = require('./routes/tuition');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 const { initSocket } = require('./utils/socket');
 
@@ -44,6 +46,8 @@ app.use('/api/seniors', seniorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/lostfound', lostFoundRoutes);
+app.use('/api/likes', likesRoutes);
+app.use('/api/tuition', tuitionRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'OK', message: 'StudyMart API running' }));
 

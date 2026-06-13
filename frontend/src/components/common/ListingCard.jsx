@@ -1,5 +1,8 @@
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { formatPrice, timeAgo, conditionColor } from '../../utils/helpers'
+import api from '../../utils/api'
+import { useAuth } from '../../context/AuthContext'
 
 const CategorySVG = ({ category }) => {
   const icons = {
@@ -18,8 +21,35 @@ const CategorySVG = ({ category }) => {
   )
 }
 
-export default function ListingCard({ listing }) {
+export default function ListingCard({ listing, initialLiked = false, initialBookmarked = false }) {
+  const { user } = useAuth()
   const { _id, title, price, isFree, category, condition, location, images, seller, createdAt, isFeatured, isSold } = listing
+  const [liked, setLiked] = useState(initialLiked)
+  const [bookmarked, setBookmarked] = useState(initialBookmarked)
+  const [likeLoading, setLikeLoading] = useState(false)
+  const [bookmarkLoading, setBookmarkLoading] = useState(false)
+
+  const handleLike = async (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!user) return
+    setLikeLoading(true)
+    try {
+      const { data } = await api.post(`/likes/${_id}/like`)
+      setLiked(data.liked)
+    } finally { setLikeLoading(false) }
+  }
+
+  const handleBookmark = async (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!user) return
+    setBookmarkLoading(true)
+    try {
+      const { data } = await api.post(`/likes/${_id}/bookmark`)
+      setBookmarked(data.bookmarked)
+    } finally { setBookmarkLoading(false) }
+  }
 
   return (
     <Link to={`/listings/${_id}`} className="card block group hover:scale-[1.01] transition-transform duration-150">
@@ -37,7 +67,26 @@ export default function ListingCard({ listing }) {
             <span className="bg-white text-gray-900 font-semibold px-3 py-1 rounded-full text-sm">Sold</span>
           </div>
         )}
+
+        {/* Like + Bookmark buttons */}
+        {user && (
+          <div className="absolute top-2 right-2 flex flex-col gap-1">
+            <button onClick={handleLike} disabled={likeLoading}
+              className={`w-7 h-7 rounded-full flex items-center justify-center shadow-sm transition-colors ${liked ? 'bg-red-500 text-white' : 'bg-white text-gray-400 hover:text-red-500'}`}>
+              <svg className="w-3.5 h-3.5" fill={liked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
+            <button onClick={handleBookmark} disabled={bookmarkLoading}
+              className={`w-7 h-7 rounded-full flex items-center justify-center shadow-sm transition-colors ${bookmarked ? 'bg-blue-500 text-white' : 'bg-white text-gray-400 hover:text-blue-500'}`}>
+              <svg className="w-3.5 h-3.5" fill={bookmarked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
+
       <div className="p-3">
         <p className="text-sm font-semibold text-gray-900 line-clamp-2 leading-snug mb-1">{title}</p>
         <p className="text-base font-bold text-blue-600 mb-2">{formatPrice(price, isFree)}</p>
