@@ -7,6 +7,7 @@ import { timeAgo, DIVISIONS } from '../utils/helpers'
 const CLASS_OPTIONS = ['Class 1-5', 'Class 6-8', 'Class 9-10', 'SSC', 'Class 11-12', 'HSC', 'Admission', 'University', 'Others']
 
 function TuitionCard({ item }) {
+  const { user } = useAuth()
   const isOffer = item.type === 'offer'
   return (
     <div className={`card p-4 border-l-4 ${isOffer ? 'border-l-blue-400' : 'border-l-green-400'}`}>
@@ -63,10 +64,9 @@ function TuitionCard({ item }) {
               {item.poster?.college && <span className="text-xs text-gray-400">· {item.poster.college}</span>}
             </div>
             {item.contactPhone && (
-              <a href={`tel:${item.contactPhone}`}
-                className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg transition-colors">
-                Contact
-              </a>
+              user
+                ? <a href={`tel:${item.contactPhone}`} className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg transition-colors">Contact</a>
+                : <span className="text-xs text-gray-400 italic">Login to contact</span>
             )}
           </div>
         </div>

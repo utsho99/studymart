@@ -14,7 +14,7 @@ router.get('/', optionalAuth, async (req, res) => {
 
   const skip = (Number(page) - 1) * Number(limit);
   const [items, total] = await Promise.all([
-    LostFound.find(query).populate('poster', 'name avatar college phone').sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+    LostFound.find(query).populate('poster', 'name avatar college').sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
     LostFound.countDocuments(query),
   ]);
   res.json({ items, total, page: Number(page), pages: Math.ceil(total / Number(limit)) });
@@ -22,10 +22,12 @@ router.get('/', optionalAuth, async (req, res) => {
 
 // GET /api/lostfound/:id
 router.get('/:id', async (req, res) => {
-  const item = await LostFound.findById(req.params.id).populate('poster', 'name avatar college phone');
+  const item = await LostFound.findById(req.params.id).populate('poster', 'name avatar college');
   if (!item) return res.status(404).json({ message: 'Not found' });
   await LostFound.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
-  res.json(item);
+  const result = item.toObject();
+  if (!req.user) delete result.contactPhone;
+  res.json(result);
 });
 
 // POST /api/lostfound

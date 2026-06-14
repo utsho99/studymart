@@ -12,6 +12,10 @@ const { uploadImages, uploadToCloudinary } = require('../middleware/uploadMiddle
 // GET /api/users/:id - public profile
 router.get('/:id', optionalAuth, async (req, res) => {
   const user = await User.findById(req.params.id).select('-password -email');
+  // Hide phone from non-logged-in viewers
+  if (!req.user) {
+    user.phone = undefined;
+  }
   if (!user) return res.status(404).json({ message: 'User not found' });
 
   const [listings, ratings, isBlocked] = await Promise.all([

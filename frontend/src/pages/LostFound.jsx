@@ -60,9 +60,9 @@ function LostFoundCard({ item, onResolve }) {
             </div>
             <div className="flex items-center gap-2">
               {item.contactPhone && (
-                <a href={`tel:${item.contactPhone}`} className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-lg hover:bg-blue-100">
-                  Call
-                </a>
+                user
+                  ? <a href={`tel:${item.contactPhone}`} className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-lg hover:bg-blue-100">Call</a>
+                  : <span className="text-xs text-gray-400 italic">Login to call</span>
               )}
               {user?._id === item.poster?._id && !item.isResolved && (
                 <button onClick={() => onResolve(item._id)} className="text-xs bg-green-50 text-green-600 px-2 py-1 rounded-lg hover:bg-green-100">

@@ -33,7 +33,11 @@ router.get('/', optionalAuth, async (req, res) => {
 
 // GET /api/listings/:id
 router.get('/:id', optionalAuth, async (req, res) => {
-  const listing = await Listing.findById(req.params.id).populate('seller', 'name avatar college location phone isVerifiedSeller rating totalReviews createdAt');
+  const isLoggedIn = !!req.user;
+  const sellerFields = isLoggedIn
+    ? 'name avatar college location phone isVerifiedSeller rating totalReviews createdAt'
+    : 'name avatar college location isVerifiedSeller rating totalReviews createdAt';
+  const listing = await Listing.findById(req.params.id).populate('seller', sellerFields);
   if (!listing) return res.status(404).json({ message: 'Listing not found' });
   await Listing.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
   res.json(listing);

@@ -17,15 +17,18 @@ router.get('/', optionalAuth, async (req, res) => {
     Tuition.find(query).populate('poster', 'name avatar college isVerifiedSeller isStudentVerified').sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
     Tuition.countDocuments(query),
   ]);
-  res.json({ items, total, page: Number(page), pages: Math.ceil(total / Number(limit)) });
+  const sanitized = req.user ? items : items.map(i => { const o = i.toObject(); delete o.contactPhone; return o; });
+  res.json({ items: sanitized, total, page: Number(page), pages: Math.ceil(total / Number(limit)) });
 });
 
 // GET /api/tuition/:id
 router.get('/:id', async (req, res) => {
-  const item = await Tuition.findById(req.params.id).populate('poster', 'name avatar college phone isVerifiedSeller isStudentVerified');
+  const item = await Tuition.findById(req.params.id).populate('poster', 'name avatar college isVerifiedSeller isStudentVerified');
   if (!item) return res.status(404).json({ message: 'Not found' });
   await Tuition.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
-  res.json(item);
+  const result = item.toObject();
+  if (!req.user) delete result.contactPhone;
+  res.json(result);
 });
 
 // POST /api/tuition
