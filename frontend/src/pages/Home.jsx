@@ -40,8 +40,10 @@ export default function Home() {
     { to: '/notes', label: 'Notes', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', color: 'bg-blue-50 text-blue-600' },
     { to: '/pyq', label: 'PYQ Bank', icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', color: 'bg-orange-50 text-orange-600' },
     { to: '/seniors', label: 'Find Senior', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', color: 'bg-purple-50 text-purple-600' },
+    { to: '/tuition', label: 'Tuition', icon: 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z', color: 'bg-teal-50 text-teal-600' },
     { to: '/lost-found', label: 'Lost & Found', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z', color: 'bg-red-50 text-red-600' },
     { to: '/gpa', label: 'GPA Calc', icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z', color: 'bg-indigo-50 text-indigo-600' },
+    { to: '/saved', label: 'Saved', icon: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z', color: 'bg-pink-50 text-pink-600' },
     { to: '/sell', label: 'Sell Item', icon: 'M12 4v16m8-8H4', color: 'bg-green-50 text-green-600' },
   ]
 
@@ -91,7 +93,7 @@ export default function Home() {
         {/* Quick Links */}
         <section className="mb-8">
           <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Access</h2>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
             {quickLinks.map(link => (
               <button key={link.to} onClick={() => navigate(link.to)}
                 className="flex flex-col items-center gap-2 p-3 bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all group">
