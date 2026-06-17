@@ -4,17 +4,22 @@ const User = require('../models/User');
 const Listing = require('../models/Listing');
 const Report = require('../models/Report');
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'utshogoateddev1';
-const ADMIN_TOKEN = Buffer.from(ADMIN_PASSWORD).toString('base64');
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_TOKEN = ADMIN_PASSWORD ? Buffer.from(ADMIN_PASSWORD).toString('base64') : null;
+
+if (!ADMIN_PASSWORD) {
+  console.warn('⚠️  ADMIN_PASSWORD environment variable is not set. Admin panel will be inaccessible.');
+}
 
 const adminAuth = (req, res, next) => {
   const token = req.headers['x-admin-token'];
-  if (!token || token !== ADMIN_TOKEN) return res.status(401).json({ message: 'Unauthorized' });
+  if (!ADMIN_TOKEN || !token || token !== ADMIN_TOKEN) return res.status(401).json({ message: 'Unauthorized' });
   next();
 };
 
 // POST /api/admin/login
 router.post('/login', (req, res) => {
+  if (!ADMIN_PASSWORD) return res.status(503).json({ message: 'Admin panel not configured' });
   const { password } = req.body;
   if (password !== ADMIN_PASSWORD) return res.status(401).json({ message: 'Wrong password' });
   res.json({ token: ADMIN_TOKEN });

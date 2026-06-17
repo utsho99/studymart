@@ -32,7 +32,26 @@ const io = new Server(server, {
 });
 initSocket(io);
 
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }));
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'https://studymartbd.shop',
+  'https://www.studymartbd.shop',
+  'https://studymart-nine.vercel.app',
+  'http://localhost:5173',
+].filter(Boolean).map(o => o.replace(/\/$/, '')); // strip trailing slashes
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow non-browser requests (curl, mobile apps)
+    const cleanOrigin = origin.replace(/\/$/, '');
+    if (allowedOrigins.includes(cleanOrigin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
