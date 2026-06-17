@@ -1,13 +1,17 @@
 {
   "rewrites": [
     {
-      "source": "/((?!api/|sw\\.js|manifest\\.webmanifest|workbox-.*\\.js|icon-.*\\.png|apple-touch-icon\\.png|studymart-icon\\.png).*)",
+      "source": "/((?!api/|sw\\.js|firebase-messaging-sw\\.js|manifest\\.webmanifest|workbox-.*\\.js|icon-.*\\.png|apple-touch-icon\\.png|studymart-icon\\.png).*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
     {
       "source": "/sw.js",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/firebase-messaging-sw.js",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     },
     {

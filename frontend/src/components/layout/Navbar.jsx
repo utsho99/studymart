@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../utils/api'
 import { timeAgo } from '../../utils/helpers'
+import { requestPushPermission, onForegroundMessage } from '../../utils/firebase'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
@@ -35,10 +36,16 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const requestNotificationPermission = async () => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      await Notification.requestPermission()
-    }
+  const setupPushNotifications = async () => {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return
+    if (Notification.permission === 'denied') return
+
+    try {
+      const token = await requestPushPermission()
+      if (token) {
+        await api.post('/notifications/fcm-token', { token }).catch(() => {})
+      }
+    } catch {}
   }
 
   const showBrowserNotification = (title, body, link) => {
@@ -85,9 +92,18 @@ export default function Navbar() {
 
   useEffect(() => {
     if (!user) return
-    requestNotificationPermission()
+    setupPushNotifications()
     fetchCounts()
     pollRef.current = setInterval(fetchCounts, 10000)
+
+    // Listen for push messages while the tab is open and focused
+    onForegroundMessage((payload) => {
+      const { title, body } = payload.notification || {}
+      const link = payload.fcmOptions?.link || payload.data?.link || '/notifications'
+      showBrowserNotification(title || 'StudyMart', body || 'You have a new notification', link)
+      fetchCounts()
+    })
+
     return () => clearInterval(pollRef.current)
   }, [user])
 
