@@ -13,7 +13,7 @@ const sendPasswordResetEmail = async (email, name, code) => {
   if (!client) { console.log('Resend not configured, skipping email'); return; }
 
   await client.emails.send({
-    from: 'StudyMart <onboarding@resend.dev>',
+    from: 'StudyMart <noreply@studymartbd.shop>',
     to: email,
     subject: 'Your StudyMart Password Reset Code',
     html: `
@@ -42,7 +42,7 @@ const sendWelcomeEmail = async (email, name) => {
   if (!client) return;
 
   await client.emails.send({
-    from: 'StudyMart <onboarding@resend.dev>',
+    from: 'StudyMart <noreply@studymartbd.shop>',
     to: email,
     subject: 'Welcome to StudyMart! 🎓',
     html: `
