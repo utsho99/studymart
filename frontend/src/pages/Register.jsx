@@ -1,12 +1,16 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { DIVISIONS } from '../utils/helpers'
 
 export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', college: '', location: '' })
+  const [searchParams] = useSearchParams()
+  const [form, setForm] = useState({
+    name: '', email: '', password: '', phone: '', college: '', location: '',
+    referralCode: searchParams.get('ref') || '',
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -19,7 +23,7 @@ export default function Register() {
       setError('All fields are required'); return
     }
     if (form.password.length < 6) { setError('Password must be at least 6 characters'); return }
-    if (!/^01[3-9]\d{8}$/.test(form.phone)) { setError('Please enter a valid Bangladeshi phone number (e.g. 01712345678)'); return }
+    if (!/^01[3-9]\d{8}$/.test(form.phone)) { setError('Please enter a valid Bangladeshi phone number'); return }
 
     setLoading(true)
     try {
@@ -27,9 +31,7 @@ export default function Register() {
       navigate('/')
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   return (
@@ -41,11 +43,7 @@ export default function Register() {
           <p className="text-gray-500 text-sm mt-1">Join Bangladesh's student marketplace</p>
         </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm mb-4">
-            {error}
-          </div>
-        )}
+        {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm mb-4">{error}</div>}
 
         <form onSubmit={handleSubmit} className="card p-6 space-y-4">
           <div>
@@ -74,6 +72,15 @@ export default function Register() {
               <option value="">Select your division</option>
               {DIVISIONS.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
+          </div>
+          <div>
+            <label className="label">Referral Code (optional)</label>
+            <input type="text" name="referralCode" value={form.referralCode} onChange={handleChange}
+              placeholder="Enter 6-digit referral code" className="input" maxLength={6}
+              style={{ textTransform: 'uppercase' }} />
+            {form.referralCode && (
+              <p className="text-xs text-green-600 mt-1">Referral code applied!</p>
+            )}
           </div>
           <button type="submit" disabled={loading} className="w-full btn-primary py-2.5 mt-2">
             {loading ? 'Creating account...' : 'Create Account'}

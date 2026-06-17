@@ -1,13 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const Referral = require('../models/Referral');
 const { generateToken } = require('../utils/generateToken');
 const { protect } = require('../middleware/authMiddleware');
 const { sendPasswordResetEmail, sendWelcomeEmail } = require('../utils/email');
 
+// Generate unique 6-digit referral code
+const generateReferralCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
+
+const EARLY_USER_LIMIT = 100;
+
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
-  const { name, email, password, phone, college, location } = req.body;
+  const { name, email, password, phone, college, location, referralCode } = req.body;
   if (!name || !email || !password || !phone || !college || !location) {
     return res.status(400).json({ message: 'All fields are required' });
   }
@@ -16,10 +22,53 @@ router.post('/register', async (req, res) => {
   const exists = await User.findOne({ email });
   if (exists) return res.status(400).json({ message: 'Email already registered' });
 
-  const user = await User.create({ name, email, password, phone, college, location });
-  const token = generateToken(user._id);
+  // Check if referral code is valid
+  let referrer = null;
+  if (referralCode) {
+    referrer = await User.findOne({ referralCode: referralCode.toUpperCase() });
+    if (!referrer) return res.status(400).json({ message: 'Invalid referral code' });
+  }
 
-  // Send welcome email (don't await - non-blocking)
+  // Check early user status
+  const totalUsers = await User.countDocuments();
+  const isEarlyUser = totalUsers < EARLY_USER_LIMIT;
+
+  // Generate unique referral code for new user
+  let newReferralCode;
+  let attempts = 0;
+  do {
+    newReferralCode = generateReferralCode();
+    attempts++;
+  } while (await User.findOne({ referralCode: newReferralCode }) && attempts < 10);
+
+  const user = await User.create({
+    name, email, password, phone, college, location,
+    isEarlyUser,
+    badges: isEarlyUser ? ['early_user'] : [],
+    referralCode: newReferralCode,
+  });
+
+  // Handle referral reward
+  if (referrer) {
+    await Referral.create({ referrer: referrer._id, referee: user._id, code: referralCode });
+
+    // Count successful referrals for referrer
+    const referralCount = await Referral.countDocuments({ referrer: referrer._id });
+    await User.findByIdAndUpdate(referrer._id, { referralCount });
+
+    // Every 5 referrals = 15 days premium + 1 credit
+    if (referralCount % 5 === 0) {
+      const premiumUntil = new Date();
+      premiumUntil.setDate(premiumUntil.getDate() + 15);
+      await User.findByIdAndUpdate(referrer._id, {
+        'subscription.plan': 'premium',
+        'subscription.expiresAt': premiumUntil,
+        $inc: { featuredListingsRemaining: 1, credits: 1 },
+      });
+    }
+  }
+
+  const token = generateToken(user._id);
   sendWelcomeEmail(email, name).catch(() => {});
 
   res.status(201).json({ token, user: sanitize(user) });
@@ -66,24 +115,17 @@ router.post('/forgot-password', async (req, res) => {
   if (!email) return res.status(400).json({ message: 'Email is required' });
 
   const user = await User.findOne({ email });
-  // Always return success to prevent email enumeration
   if (!user) return res.json({ message: 'If this email is registered, a reset code has been sent.' });
 
-  // Generate 6-digit code
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  const expiry = new Date(Date.now() + 15 * 60 * 1000);
 
-  await User.findByIdAndUpdate(user._id, {
-    resetCode: code,
-    resetCodeExpiry: expiry,
-  });
+  await User.findByIdAndUpdate(user._id, { resetCode: code, resetCodeExpiry: expiry });
 
-  // Send email via Resend
   try {
     await sendPasswordResetEmail(email, user.name, code);
     res.json({ message: 'Reset code sent to your email! Check your inbox.' });
-  } catch (err) {
-    console.error('Email send error:', err);
+  } catch {
     res.status(500).json({ message: 'Failed to send email. Please try again.' });
   }
 });
@@ -95,19 +137,22 @@ router.post('/reset-password', async (req, res) => {
   if (newPassword.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
 
   const user = await User.findOne({ email }).select('+resetCode +resetCodeExpiry');
-  if (!user || user.resetCode !== code) {
-    return res.status(400).json({ message: 'Invalid reset code. Please check your email.' });
-  }
-  if (new Date() > user.resetCodeExpiry) {
-    return res.status(400).json({ message: 'Reset code expired. Please request a new one.' });
-  }
+  if (!user || user.resetCode !== code) return res.status(400).json({ message: 'Invalid reset code.' });
+  if (new Date() > user.resetCodeExpiry) return res.status(400).json({ message: 'Reset code expired. Please request a new one.' });
 
   user.password = newPassword;
   user.resetCode = undefined;
   user.resetCodeExpiry = undefined;
   await user.save();
-
   res.json({ message: 'Password reset successfully! You can now login.' });
+});
+
+// GET /api/auth/referral-stats
+router.get('/referral-stats', protect, async (req, res) => {
+  const user = await User.findById(req.user._id).select('referralCode referralCount credits featuredListingsRemaining subscription');
+  const referrals = await Referral.find({ referrer: req.user._id }).populate('referee', 'name avatar createdAt').sort({ createdAt: -1 }).limit(20);
+  const nextRewardAt = 5 - (user.referralCount % 5);
+  res.json({ user, referrals, nextRewardAt: nextRewardAt === 5 ? 0 : nextRewardAt });
 });
 
 function sanitize(user) {
@@ -122,6 +167,12 @@ function sanitize(user) {
     isVerifiedSeller: user.isVerifiedSeller,
     isStudentVerified: user.isStudentVerified,
     isSenior: user.isSenior,
+    isEarlyUser: user.isEarlyUser,
+    badges: user.badges,
+    referralCode: user.referralCode,
+    referralCount: user.referralCount,
+    credits: user.credits,
+    featuredListingsRemaining: user.featuredListingsRemaining,
     subscription: user.subscription,
   };
 }

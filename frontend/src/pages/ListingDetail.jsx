@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import api from '../utils/api'
 import { useAuth } from '../context/AuthContext'
-import { formatPrice, timeAgo, conditionColor, categoryIcon } from '../utils/helpers'
+import { formatPrice, timeAgo, conditionColor } from '../utils/helpers'
+import UserBadges from '../components/common/UserBadges'
 
 export default function ListingDetail() {
   const { id } = useParams()
@@ -12,6 +13,8 @@ export default function ListingDetail() {
   const [loading, setLoading] = useState(true)
   const [selectedImg, setSelectedImg] = useState(0)
   const [contacting, setContacting] = useState(false)
+  const [featuring, setFeaturing] = useState(false)
+  const [featuredMsg, setFeaturedMsg] = useState('')
 
   useEffect(() => {
     api.get(`/listings/${id}`)
@@ -42,6 +45,17 @@ export default function ListingDetail() {
     if (!confirm('Mark this item as sold?')) return
     const { data } = await api.patch(`/listings/${id}/sold`)
     setListing(prev => ({ ...prev, ...data.listing }))
+  }
+
+  const handleFeature = async (method) => {
+    setFeaturing(true)
+    try {
+      const { data } = await api.post(`/listings/${id}/feature`, { method })
+      setFeaturedMsg(data.message)
+      setListing(prev => ({ ...prev, isFeatured: true }))
+    } catch (err) {
+      setFeaturedMsg(err.response?.data?.message || 'Failed to feature listing')
+    } finally { setFeaturing(false) }
   }
 
   if (loading) return (
@@ -142,6 +156,7 @@ export default function ListingDetail() {
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="font-medium text-gray-900 text-sm">{listing.seller.name}</span>
+                  <UserBadges user={listing.seller} size="sm" />
                   {listing.seller.isVerifiedSeller && (
                     <span className="badge bg-blue-50 text-blue-600 border border-blue-200">✓ Verified</span>
                   )}
@@ -157,11 +172,31 @@ export default function ListingDetail() {
                 {contacting ? 'Opening chat...' : 'Contact Seller'}
               </button>
             ) : isMine ? (
-              <div className="flex gap-2">
-                <Link to={`/listings/${id}/edit`} className="flex-1 btn-secondary text-center text-sm py-2">Edit</Link>
-                {!listing.isSold && <button onClick={handleMarkSold} className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm py-2 rounded-lg transition-colors font-medium">Mark Sold</button>}
-                <button onClick={handleDelete} className="btn-danger text-sm py-2 px-3">Delete</button>
-              </div>
+              <>
+                <div className="flex gap-2">
+                  <Link to={`/listings/${id}/edit`} className="flex-1 btn-secondary text-center text-sm py-2">Edit</Link>
+                  {!listing.isSold && <button onClick={handleMarkSold} className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm py-2 rounded-lg transition-colors font-medium">Mark Sold</button>}
+                  <button onClick={handleDelete} className="btn-danger text-sm py-2 px-3">Delete</button>
+                </div>
+                {!listing.isFeatured ? (
+                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                    <p className="text-xs font-semibold text-yellow-800 mb-2">Boost this listing</p>
+                    {featuredMsg && <p className="text-xs text-green-600 mb-2">{featuredMsg}</p>}
+                    <div className="flex gap-2">
+                      <button onClick={() => handleFeature('credits')} disabled={featuring}
+                        className="flex-1 text-xs bg-purple-600 hover:bg-purple-700 text-white py-1.5 rounded-lg transition-colors font-medium">
+                        Use Credit ({user?.credits || 0} left)
+                      </button>
+                      <button onClick={() => handleFeature('payment')} disabled={featuring}
+                        className="flex-1 text-xs bg-yellow-500 hover:bg-yellow-600 text-white py-1.5 rounded-lg transition-colors font-medium">
+                        Pay ৳49
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2 text-center badge bg-yellow-100 text-yellow-700 w-full py-1.5">★ This listing is featured</div>
+                )}
+              </>
             ) : null}
           </div>
         </div>

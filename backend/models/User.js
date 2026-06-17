@@ -16,6 +16,10 @@ const userSchema = new mongoose.Schema(
     totalReviews: { type: Number, default: 0 },
     isBanned: { type: Boolean, default: false },
 
+    // Badges
+    isEarlyUser: { type: Boolean, default: false },
+    badges: [{ type: String }], // ['early_user', 'top_contributor', etc]
+
     // Senior fields
     isSenior: { type: Boolean, default: false },
     department: { type: String, trim: true },
@@ -28,6 +32,11 @@ const userSchema = new mongoose.Schema(
     studentIdUrl: { type: String, default: '' },
     isStudentVerified: { type: Boolean, default: false },
 
+    // Referral system
+    referralCode: { type: String, unique: true, sparse: true },
+    referralCount: { type: Number, default: 0 },
+    credits: { type: Number, default: 0 }, // 1 credit = 1 featured listing boost
+
     // Password reset
     resetCode: { type: String, select: false },
     resetCodeExpiry: { type: Date, select: false },
@@ -35,7 +44,7 @@ const userSchema = new mongoose.Schema(
     // Push notification FCM token
     fcmToken: { type: String, default: '' },
 
-    // Monetization
+    // Subscription / Premium
     subscription: {
       plan: { type: String, enum: ['free', 'premium'], default: 'free' },
       expiresAt: { type: Date },
@@ -54,6 +63,11 @@ userSchema.pre('save', async function (next) {
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
+};
+
+// Check if premium is still active
+userSchema.methods.isPremium = function () {
+  return this.subscription?.plan === 'premium' && this.subscription?.expiresAt > new Date();
 };
 
 module.exports = mongoose.model('User', userSchema);

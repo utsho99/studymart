@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Listing = require('../models/Listing');
+const User = require('../models/User');
 const { protect, optionalAuth } = require('../middleware/authMiddleware');
 const { uploadImages, uploadToCloudinary } = require('../middleware/uploadMiddleware');
 
@@ -110,6 +111,32 @@ router.patch('/:id/sold', protect, async (req, res) => {
   listing.isActive = false;
   await listing.save();
   res.json({ message: 'Marked as sold', listing });
+});
+
+// POST /api/listings/:id/feature - feature a listing using credits or payment
+router.post('/:id/feature', protect, async (req, res) => {
+  const { method } = req.body; // 'credits' or 'payment'
+  const listing = await Listing.findById(req.params.id);
+  if (!listing) return res.status(404).json({ message: 'Listing not found' });
+  if (listing.seller.toString() !== req.user._id.toString()) return res.status(403).json({ message: 'Not authorized' });
+
+  const user = await User.findById(req.user._id);
+
+  if (method === 'credits') {
+    if (user.credits < 1 && user.featuredListingsRemaining < 1) {
+      return res.status(400).json({ message: 'Not enough credits. Invite friends to earn credits!' });
+    }
+    // Deduct credit
+    const field = user.featuredListingsRemaining > 0 ? 'featuredListingsRemaining' : 'credits';
+    await User.findByIdAndUpdate(req.user._id, { $inc: { [field]: -1 } });
+  }
+  // payment method - just mark as featured (actual payment handled separately)
+
+  const featuredUntil = new Date();
+  featuredUntil.setDate(featuredUntil.getDate() + 7); // 7 days featured
+
+  await Listing.findByIdAndUpdate(req.params.id, { isFeatured: true, featuredUntil });
+  res.json({ message: 'Listing featured for 7 days!' });
 });
 
 module.exports = router;

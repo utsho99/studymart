@@ -9,6 +9,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 
 const authRoutes = require('./routes/auth');
+require('./models/Referral'); // ensure model is registered
 const listingRoutes = require('./routes/listings');
 const noteRoutes = require('./routes/notes');
 const chatRoutes = require('./routes/chat');
