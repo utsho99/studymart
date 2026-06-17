@@ -27,6 +27,7 @@ import GPACalculator from './pages/GPACalculator'
 import Tuition from './pages/Tuition'
 import SavedListings from './pages/SavedListings'
 import ReferralPage from './pages/ReferralPage'
+import InstallPrompt from './components/common/InstallPrompt'
 
 function Layout() {
   const location = useLocation()
@@ -83,6 +84,7 @@ export default function App() {
     <AuthProvider>
       <div className="min-h-screen bg-gray-50">
         <Layout />
+        <InstallPrompt />
       </div>
     </AuthProvider>
   )
