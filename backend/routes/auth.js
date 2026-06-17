@@ -147,9 +147,27 @@ router.post('/reset-password', async (req, res) => {
   res.json({ message: 'Password reset successfully! You can now login.' });
 });
 
+// Helper to generate a unique referral code
+const generateUniqueReferralCode = async () => {
+  let code;
+  let attempts = 0;
+  do {
+    code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    attempts++;
+  } while (await User.findOne({ referralCode: code }) && attempts < 10);
+  return code;
+};
+
 // GET /api/auth/referral-stats
 router.get('/referral-stats', protect, async (req, res) => {
-  const user = await User.findById(req.user._id).select('referralCode referralCount credits featuredListingsRemaining subscription');
+  let user = await User.findById(req.user._id).select('referralCode referralCount credits featuredListingsRemaining subscription');
+
+  // Backfill: generate a referral code if this account predates the referral feature
+  if (!user.referralCode) {
+    user.referralCode = await generateUniqueReferralCode();
+    await user.save();
+  }
+
   const referrals = await Referral.find({ referrer: req.user._id }).populate('referee', 'name avatar createdAt').sort({ createdAt: -1 }).limit(20);
   const nextRewardAt = 5 - (user.referralCount % 5);
   res.json({ user, referrals, nextRewardAt: nextRewardAt === 5 ? 0 : nextRewardAt });

@@ -19,7 +19,7 @@ export default function ReferralPage() {
   }, [user])
 
   const copyCode = () => {
-    navigator.clipboard.writeText(user.referralCode || '')
+    navigator.clipboard.writeText(data?.user?.referralCode || '')
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -55,7 +55,7 @@ export default function ReferralPage() {
         <h2 className="font-semibold text-gray-900 mb-3">Your Referral Code</h2>
         <div className="flex items-center gap-3">
           <div className="flex-1 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-4 text-center">
-            <p className="text-3xl font-black tracking-widest text-blue-600">{user?.referralCode || '------'}</p>
+            <p className="text-3xl font-black tracking-widest text-blue-600">{data?.user?.referralCode || '------'}</p>
           </div>
           <button onClick={copyCode}
             className={`px-4 py-3 rounded-xl font-medium text-sm transition-colors ${copied ? 'bg-green-500 text-white' : 'btn-primary'}`}>
