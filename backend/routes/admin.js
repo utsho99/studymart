@@ -87,7 +87,7 @@ router.get('/users', adminAuth, async (req, res) => {
   const query = {};
   if (search) query.$or = [{ name: new RegExp(search, 'i') }, { email: new RegExp(search, 'i') }];
   const [users, total] = await Promise.all([
-    User.find(query).select('name email college location isStudentVerified isVerifiedSeller isBanned isSenior createdAt')
+    User.find(query).select('name email college location isStudentVerified isVerifiedSeller isBanned isSenior isEarlyUser createdAt')
       .sort({ createdAt: -1 }).skip((page - 1) * 20).limit(20),
     User.countDocuments(query),
   ]);
@@ -129,6 +129,22 @@ router.get('/listings', adminAuth, async (req, res) => {
 router.delete('/listings/:id', adminAuth, async (req, res) => {
   await Listing.findByIdAndUpdate(req.params.id, { isActive: false });
   res.json({ message: 'Listing removed' });
+});
+
+// POST /api/admin/backfill-early-users - one-time backfill for existing users
+router.post('/backfill-early-users', adminAuth, async (req, res) => {
+  const EARLY_USER_LIMIT = 100;
+  const earlyUsers = await User.find().sort({ createdAt: 1 }).limit(EARLY_USER_LIMIT);
+  let updated = 0;
+  for (const u of earlyUsers) {
+    if (!u.isEarlyUser) {
+      u.isEarlyUser = true;
+      if (!u.badges.includes('early_user')) u.badges.push('early_user');
+      await u.save();
+      updated++;
+    }
+  }
+  res.json({ message: `Backfilled ${updated} early users out of first ${earlyUsers.length}` });
 });
 
 module.exports = router;
